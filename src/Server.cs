@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 
 
 using TcpListener server = new(IPAddress.Any, 6379);
@@ -32,8 +33,45 @@ void HandleClient(TcpClient client)
         byte[] buffer = new byte[256];
         stream.Read(buffer);
 
-        var command = System.Text.Encoding.ASCII.GetString(buffer);
+        var input = System.Text.Encoding.ASCII.GetString(buffer);
+        var (command, argument) = ParseCommand(input);
+        string result = HandleCommand(command, argument);
+        Console.WriteLine($"result: '{result}'");
+        stream.Write(System.Text.Encoding.ASCII.GetBytes(result));
+    }
+}
 
-        stream.Write(System.Text.Encoding.ASCII.GetBytes("+PONG\r\n"));
+(string, string) ParseCommand(string input)
+{
+    Match match = Regex.Match(input, @"\*\d+\r\n\$\d+\r\n(\w+)\r\n(\$\d\r\n(\w+)\r\n)?");
+    string command, argument;
+
+    Console.WriteLine($"input: '{@input}'");
+    Console.WriteLine($"match success?: '{match.Success}'");
+
+
+    if (match.Success)
+    {
+        command = match.Groups[1].Value.ToUpper();
+        argument = match.Groups[2].Value;
+    }
+    else
+    {
+        throw new Exception("Nope");
+    }
+
+    return (command, argument);
+}
+
+string HandleCommand(string command, string argument)
+{
+    switch(command)
+    {
+        case "PING":
+            return "+PONG\r\n";
+        case "ECHO":
+            return $"${argument.Length}\r\n{argument}\r\n";
+        default:
+            return "";
     }
 }
