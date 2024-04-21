@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
-
 using TcpListener server = new(IPAddress.Any, 6379);
 
 try
@@ -36,19 +35,14 @@ void HandleClient(TcpClient client)
         var input = System.Text.Encoding.ASCII.GetString(buffer);
         var (command, argument) = ParseCommand(input);
         string result = HandleCommand(command, argument);
-        Console.WriteLine($"result: '{result}'");
         stream.Write(System.Text.Encoding.ASCII.GetBytes(result));
     }
 }
 
 (string, string) ParseCommand(string input)
 {
-    Match match = Regex.Match(input, @"\*\d+\r\n\$\d+\r\n(\w+)\r\n(\$\d\r\n(\w+)\r\n)?");
+    Match match = Regex.Match(input, @"\*\d+\r\n\$\d+\r\n(\w+)\r\n(?:\$\d+\r\n(\w+)\r\n)?");
     string command, argument;
-
-    Console.WriteLine($"input: '{@input}'");
-    Console.WriteLine($"match success?: '{match.Success}'");
-
 
     if (match.Success)
     {
