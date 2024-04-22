@@ -4,6 +4,8 @@ using System.Text.RegularExpressions;
 
 using TcpListener server = new(IPAddress.Any, 6379);
 
+Dictionary<string, string> store = [];
+
 try
 {
     server.Start();
@@ -33,38 +35,46 @@ void HandleClient(TcpClient client)
         stream.Read(buffer);
 
         var input = System.Text.Encoding.ASCII.GetString(buffer);
-        var (command, argument) = ParseCommand(input);
-        string result = HandleCommand(command, argument);
+        var (command, arguments) = ParseCommand(input);
+        string result = HandleCommand(command, arguments);
         stream.Write(System.Text.Encoding.ASCII.GetBytes(result));
     }
 }
 
-(string, string) ParseCommand(string input)
+(string, List<string>) ParseCommand(string input)
 {
-    Match match = Regex.Match(input, @"\*\d+\r\n\$\d+\r\n(\w+)\r\n(?:\$\d+\r\n(\w+)\r\n)?");
-    string command, argument;
+    MatchCollection matches = Regex.Matches(input, @"\$\d+\r\n(\w+)\r\n", RegexOptions.Multiline);
+    string command = "";
+    List<string> arguments = [];
 
-    if (match.Success)
+    foreach (Match match in matches)
     {
-        command = match.Groups[1].Value.ToUpper();
-        argument = match.Groups[2].Value;
-    }
-    else
-    {
-        throw new Exception("Nope");
+        if (command == string.Empty)
+        {
+            command = match.Groups[1].Value.ToUpper();
+            continue;
+        }
+
+        arguments.Add(match.Groups[1].Value);
     }
 
-    return (command, argument);
+    return (command, arguments);
 }
 
-string HandleCommand(string command, string argument)
+string HandleCommand(string command, List<string> arguments)
 {
     switch(command)
     {
         case "PING":
             return "+PONG\r\n";
         case "ECHO":
-            return $"${argument.Length}\r\n{argument}\r\n";
+            return $"${arguments[0].Length}\r\n{arguments[0]}\r\n";
+        case "GET":
+            var result = store[arguments[0]];
+            return $"${result.Length}\r\n{result}\r\n";
+        case "SET":
+            store.Add(arguments[0], arguments[1]);
+            return "+OK\r\n";
         default:
             return "";
     }
