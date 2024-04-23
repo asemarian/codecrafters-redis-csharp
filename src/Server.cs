@@ -67,7 +67,7 @@ string HandleCommand(string command, List<string> arguments)
     switch(command)
     {
         case "PING":
-            return "+PONG\r\n";
+            return SimpleString("PONG");
         case "ECHO":
             return BulkString(arguments[0]);
         case "GET":
