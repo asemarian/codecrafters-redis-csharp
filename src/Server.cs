@@ -31,12 +31,12 @@ void HandleClient(TcpClient client)
 
     while (client.Connected)
     {
-        byte[] buffer = new byte[256];
+        byte[] buffer = new byte[client.ReceiveBufferSize];
         stream.Read(buffer);
 
-        var input = System.Text.Encoding.ASCII.GetString(buffer);
-        var (command, arguments) = ParseCommand(input);
+        var (command, arguments) = ParseCommand(System.Text.Encoding.ASCII.GetString(buffer));
         string result = HandleCommand(command, arguments);
+
         stream.Write(System.Text.Encoding.ASCII.GetBytes(result));
     }
 }
@@ -44,6 +44,7 @@ void HandleClient(TcpClient client)
 (string, List<string>) ParseCommand(string input)
 {
     MatchCollection matches = Regex.Matches(input, @"\$\d+\r\n(\w+)\r\n", RegexOptions.Multiline);
+
     string command = "";
     List<string> arguments = [];
 
@@ -68,14 +69,25 @@ string HandleCommand(string command, List<string> arguments)
         case "PING":
             return "+PONG\r\n";
         case "ECHO":
-            return $"${arguments[0].Length}\r\n{arguments[0]}\r\n";
+            return BulkString(arguments[0]);
         case "GET":
-            var result = store[arguments[0]];
-            return $"${result.Length}\r\n{result}\r\n";
+            return BulkString(store[arguments[0]]);
         case "SET":
             store.Add(arguments[0], arguments[1]);
-            return "+OK\r\n";
+            return SimpleString("OK");
         default:
             return "";
     }
 }
+
+string BulkString(string input)
+{
+    return $"${input.Length}\r\n{input}\r\n";
+}
+
+string SimpleString(string input)
+{
+    return $"+{input}\r\n";
+}
+
+// TODO: take a look at other implementations
