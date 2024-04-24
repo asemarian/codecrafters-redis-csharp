@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 using TcpListener server = new(IPAddress.Any, 6379);
 
-Dictionary<string, string> store = [];
+Dictionary<string, StoredValue> store = [];
 
 try
 {
@@ -64,16 +64,16 @@ void HandleClient(TcpClient client)
 
 string HandleCommand(string command, List<string> arguments)
 {
-    switch(command)
+    switch (command)
     {
         case "PING":
             return SimpleString("PONG");
         case "ECHO":
             return BulkString(arguments[0]);
         case "GET":
-            return BulkString(store[arguments[0]]);
+            return Get(arguments);
         case "SET":
-            store.Add(arguments[0], arguments[1]);
+            Set(arguments);
             return SimpleString("OK");
         default:
             return "";
@@ -90,4 +90,40 @@ string SimpleString(string input)
     return $"+{input}\r\n";
 }
 
-// TODO: take a look at other implementations
+string NullBulkString()
+{
+    return "$-1\r\n";
+}
+
+void Set(List<string> args)
+{
+    if (args.Count > 2)
+    {
+        store.Add(args[0], new StoredValue(args[1], ToTimestamp(int.Parse(args[3]))));
+    }
+    else
+    {
+        store.Add(args[0], new StoredValue(args[1], -1));
+    }
+}
+
+long ToTimestamp(int interval)
+{
+    return DateTimeOffset.Now.ToUnixTimeMilliseconds() + interval;
+}
+
+string Get(List<string> arguments)
+{
+    var expirationTime = store[arguments[0]].Expiry;
+    long now = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+    if ((expirationTime != -1) && (expirationTime - now <= 0))
+    {
+        return NullBulkString();
+    }
+
+    return BulkString(store[arguments[0]].Value);
+}
+
+// TODO: add background job to delete expired keys
+// TODO: refactor to classes and remove hardcoded assumptions
