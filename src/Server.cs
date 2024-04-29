@@ -103,7 +103,7 @@ void Set(List<string> args)
     }
     else
     {
-        store.Add(args[0], new StoredValue(args[1], -1));
+        store.Add(args[0], new StoredValue(args[1]));
     }
 }
 
@@ -117,7 +117,7 @@ string Get(List<string> arguments)
     var expirationTime = store[arguments[0]].Expiry;
     long now = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
-    if ((expirationTime != -1) && (expirationTime - now <= 0))
+    if ((expirationTime != null) && (expirationTime - now <= 0))
     {
         return NullBulkString();
     }
