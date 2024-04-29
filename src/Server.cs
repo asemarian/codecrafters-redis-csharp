@@ -2,7 +2,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
-using TcpListener server = new(IPAddress.Any, 6379);
+int port = 6379;
+if (args.Length > 1)
+{
+    _ = int.TryParse(args[1], out port);
+}
+using TcpListener server = new(IPAddress.Any, port);
 
 Dictionary<string, StoredValue> store = [];
 
